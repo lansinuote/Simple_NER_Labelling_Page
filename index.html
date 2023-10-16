@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+
+<head>
+    <style>
+        #text span {
+            border: 1px solid black;
+            padding: 0 5px;
+        }
+
+        .selected.person {
+            background-color: #ca8e8e;
+        }
+
+        .selected.first.person {
+            background-color: #8d4545;
+        }
+
+        .selected.location {
+            background-color: #7e96d1;
+        }
+
+        .selected.first.location {
+            background-color: #5e77b7;
+        }
+
+        .selected.organization {
+            background-color: #7cb37c;
+        }
+
+        .selected.first.organization {
+            background-color: #519d51;
+        }
+
+        .selected {
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <p>剩余数量:<span style="color: #5e77b7;" id="rest_count">1024</span>条</p>
+
+    <p>
+        <label style="color: #8d4545;"><input type="radio" name="label_type" value="person" checked>人名</label>
+        <label style="color: #5e77b7;"><input type="radio" name="label_type" value="location">地名</label>
+        <label style="color: #519d51;"><input type="radio" name="label_type" value="organization">组织机构名</label>
+    </p>
+
+    <p id="text">
+        <span>零</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>七</span><span>八</span><span>九</span><span>十</span><span>十一</span><span>十二</span><span>十三</span><span>十四</span><span>十五</span><span>十六</span><span>十七</span><span>十八</span><span>十九</span><span>二十</span>
+    </p>
+
+    <p>
+        <button id="submit">提交</button>
+        <button id="next">下一条</button>
+        <button id="delete">删除</button>
+    </p>
+</body>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+    function selected_click() {
+        curr = $(this);
+
+        prev = curr;
+        next = curr.next();
+
+        while (true) {
+            if (!next.hasClass('selected') || next.hasClass('first')) {
+                break;
+            }
+            next.removeClass();
+            next = next.next();
+        }
+
+        while (true) {
+            if (!prev.hasClass('selected')) {
+                break;
+            }
+            first = prev.hasClass('first');
+            prev.removeClass();
+            if (first) {
+                break;
+            }
+            prev = prev.prev();
+        }
+
+        reset_listener();
+    }
+
+    function span_mouseup() {
+        label_to = $(this).index();
+
+        if (label_from > label_to) {
+            var temp = label_to;
+            label_to = label_from;
+            label_from = temp;
+        }
+
+        //禁止覆盖式标记
+        for (var i = label_from; i <= label_to; i++) {
+            span = $('#text span:eq(' + i + ')');
+            if (span.hasClass('selected')) {
+                return;
+            }
+        }
+
+        for (var i = label_from; i <= label_to; i++) {
+            span = $('#text span:eq(' + i + ')');
+            span.addClass('selected').removeClass('first');
+            if (i == label_from) {
+                span.addClass('first');
+            }
+
+            span.addClass($('[name=label_type]:checked').val());
+        }
+
+        reset_listener();
+    }
+
+    var label_from;
+
+    function reset_listener() {
+        $('#text span').off().mousedown(function () {
+            label_from = $(this).index();
+        }).mouseup(span_mouseup);
+
+        setTimeout(function () {
+            $('.selected').off().click(selected_click);
+        }, 50);
+    }
+
+    reset_listener();
+
+    $('#submit').click(function () {
+        labels = []
+        for (var span of $('#text span')) {
+            span = $(span);
+
+            if (!span.hasClass('selected')) {
+                labels.push('0');
+                continue;
+            }
+
+            if (span.hasClass('person')) {
+                labels.push(span.hasClass('first') ? '1' : '2');
+                continue;
+            }
+
+            if (span.hasClass('location')) {
+                labels.push(span.hasClass('first') ? '3' : '4');
+                continue;
+            }
+
+            if (span.hasClass('organization')) {
+                labels.push(span.hasClass('first') ? '5' : '6');
+                continue;
+            }
+        }
+
+        console.log(labels);
+        console.log('提交数据到你的服务端');
+        //$.post(...)
+
+        $('#next').click();
+    });
+
+    $('#next').click(function () {
+        console.log('从你的服务端获取数据,假设如下:');
+        //$.get(...)
+        json = {
+            state: "success",
+            id: 12400,
+            text: ["hello", ",", "今", "天", "给", "大", "家", "介", "绍", "冷", "热", "酸", "甜", "，", "想", "吃", "就", "吃", "的", "冷", "酸", "灵", "牙", "膏", "。"],
+            label_by_model: ["0", "0", "0", "0", "0", "0", "0", "0", "0", "1", "2", "2", "2", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0"],
+            label_by_human: [],
+            dropped: false,
+        }
+
+        texts = json.text
+        labels = json.label_by_model
+        if (json.label_by_human.length > 0) {
+            labels = json.label_by_human
+        }
+
+        $('#text').empty();
+
+        for (var i = 0; i < texts.length; i++) {
+            span = $('<span>' + texts[i] + '</span>');
+
+            if (labels[i] != '0') {
+                span.addClass('selected');
+            }
+
+            if (labels[i] == '1') {
+                span.addClass('first');
+                span.addClass('person');
+            }
+
+            if (labels[i] == '2') {
+                span.addClass('person');
+            }
+
+            if (labels[i] == '3') {
+                span.addClass('first');
+                span.addClass('location');
+            }
+
+            if (labels[i] == '4') {
+                span.addClass('location');
+            }
+
+            if (labels[i] == '5') {
+                span.addClass('first');
+                span.addClass('organization');
+            }
+
+            if (labels[i] == '6') {
+                span.addClass('organization');
+            }
+
+            $('#text').append(span);
+        }
+
+        reset_listener();
+
+        console.log('从你的服务端获取剩余数量');
+        //$.get(...)
+    });
+
+    $('#delete').click(function () {
+        console.log('从你的服务端删除此数据');
+        //$.get(...)
+
+        $('#next').click();
+    });
+</script>
